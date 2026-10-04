@@ -1,15 +1,17 @@
 import * as Haptics from 'expo-haptics';
 import { useMemo } from 'react';
-import { Alert, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Header, HeaderButton } from '../components/Header';
+import { confirmDestructive } from '../confirm';
 import { dateKey, HISTORY_DAYS, lastNDays, todayKey } from '../dates';
-import type { TasbeehStore } from '../store';
+import { secondaryLines, stripMarks, titleOf, type TasbeehStore } from '../store';
 import { colors } from '../theme';
 
 type Props = {
   store: TasbeehStore;
-  onOpenHistory: () => void;
+  /** Opens history for one tasbeeh, or for all of them when given null. */
+  onOpenHistory: (tasbeehId: string | null) => void;
   onOpenList: () => void;
   onAdd: () => void;
 };
@@ -18,7 +20,7 @@ const SWIPE_DISTANCE = 50;
 
 export function CounterScreen({ store, onOpenHistory, onOpenList, onAdd }: Props) {
   const { tasbeehs, counts, activeId, setActive } = store;
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const index = tasbeehs.findIndex((t) => t.id === activeId);
   const active = tasbeehs[index];
 
@@ -58,7 +60,15 @@ export function CounterScreen({ store, onOpenHistory, onOpenList, onAdd }: Props
   const days = counts[active.id] ?? {};
   const today = days[todayKey()] ?? 0;
   const monthTotal = lastNDays(HISTORY_DAYS).reduce((sum, d) => sum + (days[dateKey(d)] ?? 0), 0);
-  const circle = Math.min(width * 0.62, 280);
+  const circle = Math.min(width * 0.62, height * 0.3, 280);
+
+  const title = titleOf(active);
+  const [transliteration, translation] = [active.transliteration, active.translation].map((line) =>
+    line && line !== title ? line : undefined,
+  );
+  // Longer tasbeehat get a smaller font so they fit in the card.
+  const titleLength = stripMarks(title).length;
+  const titleSize = titleLength > 45 ? 22 : titleLength > 24 ? 26 : 32;
 
   const count = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -66,10 +76,9 @@ export function CounterScreen({ store, onOpenHistory, onOpenList, onAdd }: Props
   };
 
   const confirmReset = () => {
-    Alert.alert('Reset today?', `Today's count for "${active.text}" will go back to 0.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Reset', style: 'destructive', onPress: () => store.resetToday(active.id) },
-    ]);
+    confirmDestructive('Reset today?', `Today's count for "${title}" will go back to 0.`, 'Reset', () =>
+      store.resetToday(active.id),
+    );
   };
 
   return (
@@ -78,7 +87,7 @@ export function CounterScreen({ store, onOpenHistory, onOpenList, onAdd }: Props
         title="Tasbeeh"
         right={
           <>
-            <HeaderButton label="History" onPress={onOpenHistory} />
+            <HeaderButton label="History" onPress={() => onOpenHistory(null)} />
             <HeaderButton label="List" onPress={onOpenList} />
           </>
         }
@@ -89,9 +98,23 @@ export function CounterScreen({ store, onOpenHistory, onOpenList, onAdd }: Props
           <Text style={[styles.arrow, tasbeehs.length < 2 && styles.arrowDisabled]}>‹</Text>
         </Pressable>
         <View style={styles.cardBody}>
-          <Text style={styles.tasbeehText} numberOfLines={3} adjustsFontSizeToFit>
-            {active.text}
+          <Text
+            style={[styles.tasbeehText, { fontSize: titleSize, lineHeight: titleSize * 1.6 }]}
+            numberOfLines={3}
+            adjustsFontSizeToFit
+          >
+            {title}
           </Text>
+          {transliteration && (
+            <Text style={styles.transliteration} numberOfLines={2}>
+              {transliteration}
+            </Text>
+          )}
+          {translation && (
+            <Text style={styles.translation} numberOfLines={2}>
+              {translation}
+            </Text>
+          )}
           <Text style={styles.position}>
             {index + 1} / {tasbeehs.length}
           </Text>
@@ -134,7 +157,7 @@ export function CounterScreen({ store, onOpenHistory, onOpenList, onAdd }: Props
         </View>
       </View>
 
-      <Pressable onPress={onOpenHistory} style={({ pressed }) => [styles.summary, pressed && styles.pressed]}>
+      <Pressable onPress={() => onOpenHistory(active.id)} style={({ pressed }) => [styles.summary, pressed && styles.pressed]}>
         <Text style={styles.summaryLabel}>Last {HISTORY_DAYS} days</Text>
         <Text style={styles.summaryValue}>{monthTotal}</Text>
       </Pressable>
@@ -185,10 +208,23 @@ const styles = StyleSheet.create({
   },
   tasbeehText: {
     color: colors.gold,
-    fontSize: 32,
-    lineHeight: 50,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  transliteration: {
+    color: colors.text,
+    fontSize: 15,
+    lineHeight: 21,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  translation: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: 4,
   },
   position: {
     color: colors.textMuted,

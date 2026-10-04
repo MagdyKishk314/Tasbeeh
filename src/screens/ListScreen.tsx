@@ -1,8 +1,9 @@
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Header, HeaderButton } from '../components/Header';
+import { confirmDestructive } from '../confirm';
 import { todayKey } from '../dates';
-import type { Tasbeeh, TasbeehStore } from '../store';
+import { secondaryLines, titleOf, type Tasbeeh, type TasbeehStore } from '../store';
 import { colors } from '../theme';
 
 type Props = {
@@ -22,10 +23,9 @@ export function ListScreen({ store, onBack, onAdd, onEdit }: Props) {
   };
 
   const confirmDelete = (tasbeeh: Tasbeeh) => {
-    Alert.alert('Delete tasbeeh?', `"${tasbeeh.text}" and all of its history will be deleted.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => store.removeTasbeeh(tasbeeh.id) },
-    ]);
+    confirmDestructive('Delete tasbeeh?', `"${titleOf(tasbeeh)}" and all of its history will be deleted.`, 'Delete', () =>
+      store.removeTasbeeh(tasbeeh.id),
+    );
   };
 
   return (
@@ -42,7 +42,12 @@ export function ListScreen({ store, onBack, onAdd, onEdit }: Props) {
             style={({ pressed }) => [styles.row, item.id === activeId && styles.rowActive, pressed && styles.pressed]}
           >
             <View style={styles.rowBody}>
-              <Text style={styles.text}>{item.text}</Text>
+              <Text style={styles.text}>{titleOf(item)}</Text>
+              {secondaryLines(item).map((line) => (
+                <Text key={line} style={styles.secondary} numberOfLines={2}>
+                  {line}
+                </Text>
+              ))}
               <Text style={styles.today}>Today: {counts[item.id]?.[today] ?? 0}</Text>
             </View>
             <Pressable onPress={() => onEdit(item)} hitSlop={8} style={styles.rowButton}>
@@ -95,10 +100,16 @@ const styles = StyleSheet.create({
     lineHeight: 32,
     fontWeight: '600',
   },
+  secondary: {
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 18,
+    opacity: 0.8,
+  },
   today: {
     color: colors.textMuted,
     fontSize: 13,
-    marginTop: 2,
+    marginTop: 6,
   },
   rowButton: {
     paddingHorizontal: 8,

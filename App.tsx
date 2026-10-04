@@ -12,7 +12,7 @@ import { colors } from './src/theme';
 
 type Screen =
   | { name: 'counter' }
-  | { name: 'history' }
+  | { name: 'history'; tasbeehId: string | null }
   | { name: 'list' }
   | { name: 'form'; editing?: Tasbeeh; returnTo: 'counter' | 'list' };
 
@@ -44,10 +44,10 @@ function Root() {
 
   if (!store.loaded) return null;
 
-  const active = store.tasbeehs.find((t) => t.id === store.activeId);
-
-  if (screen.name === 'history' && active) {
-    return <HistoryScreen tasbeeh={active} counts={store.counts[active.id] ?? {}} onBack={goBack} />;
+  if (screen.name === 'history') {
+    return (
+      <HistoryScreen tasbeehs={store.tasbeehs} counts={store.counts} initialId={screen.tasbeehId} onBack={goBack} />
+    );
   }
 
   if (screen.name === 'list') {
@@ -65,11 +65,11 @@ function Root() {
     const { editing } = screen;
     return (
       <FormScreen
-        initialText={editing?.text}
+        initial={editing}
         onCancel={goBack}
-        onSave={(text) => {
-          if (editing) store.editTasbeeh(editing.id, text);
-          else store.addTasbeeh(text);
+        onSave={(fields) => {
+          if (editing) store.editTasbeeh(editing.id, fields);
+          else store.addTasbeeh(fields);
           goBack();
         }}
       />
@@ -79,7 +79,7 @@ function Root() {
   return (
     <CounterScreen
       store={store}
-      onOpenHistory={() => setScreen({ name: 'history' })}
+      onOpenHistory={(tasbeehId) => setScreen({ name: 'history', tasbeehId })}
       onOpenList={() => setScreen({ name: 'list' })}
       onAdd={() => setScreen({ name: 'form', returnTo: 'counter' })}
     />

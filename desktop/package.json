@@ -1,0 +1,33 @@
+{
+  "name": "tasbeeh-desktop",
+  "productName": "Tasbeeh",
+  "version": "1.0.0",
+  "description": "Tasbeeh counter for Windows",
+  "author": "Magdy",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "export": "cd .. && npx expo export --platform web --output-dir desktop/web",
+    "start": "npm run export && electron .",
+    "build": "npm run export && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.tasbeeh.app",
+    "productName": "Tasbeeh",
+    "files": [
+      "main.js",
+      "web/**"
+    ],
+    "directories": {
+      "output": "../../Tasbeeh-desktop-release"
+    },
+    "win": {
+      "target": "zip",
+      "icon": "../assets/icon.png"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  }
+}
